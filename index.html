@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>학생회장 선거 개표 시스템</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;color:#172033;background:#f3f5f9}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;padding:28px 18px;display:flex;justify-content:center;align-items:center}
+main{width:min(1100px,100%);background:white;border:1px solid #e4e8ef;border-radius:26px;padding:clamp(20px,4vw,44px);box-shadow:0 18px 55px #17203312}
+header{text-align:center;margin-bottom:30px}
+.eyebrow{display:inline-block;background:#eaf6ee;color:#16803d;padding:7px 13px;border-radius:99px;font-size:13px;font-weight:700}
+h1{font-size:clamp(27px,4vw,42px);margin:15px 0 6px}
+.sub{color:#718096;font-size:15px}
+.total{background:#f5f7fb;border-radius:20px;text-align:center;padding:20px;margin:0 0 22px}
+.total small{color:#68758a;font-weight:700}
+.total strong{display:block;font-size:clamp(42px,7vw,68px);line-height:1.2;margin-top:5px;font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.panel{border-radius:20px;padding:24px;text-align:center}
+.yes{background:#eff9f1}.no{background:#fff1f1}
+.count{font-size:clamp(46px,7vw,70px);font-weight:800;line-height:1.15;margin:7px 0 18px;font-variant-numeric:tabular-nums}
+.yes .count{color:#16803d}.no .count{color:#c83232}
+.panel h2{font-size:23px;margin:0;color:#263247}
+button{border:0;border-radius:13px;padding:15px 18px;font-size:17px;font-weight:750;cursor:pointer;transition:filter .15s,transform .08s}
+button:active{transform:scale(.98)}
+button:hover{filter:brightness(.96)}
+.add{width:100%;color:white}
+.yes .add{background:#16803d}.no .add{background:#c83232}
+.undo{margin-top:10px;width:100%;background:#fff;color:#465268;border:1px solid #dce2eb}
+.invalid{margin-top:18px;background:#fff8e8;border:1px solid #f5e5bd;border-radius:18px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.invalid h2{font-size:19px;margin:0 0 4px}.invalid .count-small{font-size:30px;font-weight:800;color:#9a6810;font-variant-numeric:tabular-nums}
+.invalid-actions{display:flex;gap:9px;flex-wrap:wrap}
+.invalid .add{background:#b77912;width:auto}.invalid .undo{margin:0;width:auto}
+.stats{margin-top:24px;border-top:1px solid #e8ebf1;padding-top:22px}
+.stats h2{font-size:18px;margin:0 0 16px}
+.statrow{display:flex;justify-content:space-between;gap:12px;margin:11px 0;color:#536176}
+.statrow strong{color:#172033;font-variant-numeric:tabular-nums}
+.bar{height:13px;background:#edf0f5;border-radius:99px;overflow:hidden;display:flex;margin:8px 0 16px}
+.bar span{height:100%;display:block}
+#yesbar{background:#16803d}#nobar{background:#c83232}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.actions button{flex:1;min-width:180px}
+.copy{background:#24344d;color:white}.reset{background:white;border:1px solid #dce2eb;color:#465268}
+.note{font-size:12px;line-height:1.6;color:#8792a3;margin:18px 0 0}
+@media(max-width:650px){body{padding:12px}.grid{gap:10px}.panel{padding:17px 12px}.invalid{align-items:flex-start;flex-direction:column}.invalid-actions{width:100%}.invalid-actions button{flex:1}.actions{flex-direction:column}.actions button{width:100%}}
+@media print{body{background:white;padding:0}main{box-shadow:none;border:0}.actions,.undo,.add,.note{display:none!important}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <span class="eyebrow">실시간 개표 시스템</span>
+  <h1>학생회장 선거 개표 현황</h1>
+  <div class="sub">선거관리위원회 · 개표 집계 화면</div>
+</header>
+<section class="total" aria-live="polite">
+  <small>총 투표수</small>
+  <strong id="total">0표</strong>
+</section>
+<section class="grid">
+  <div class="panel yes">
+    <h2>찬성</h2><div class="count" id="yes">0</div>
+    <button class="add" id="yesAdd">＋ 찬성 1표</button>
+    <button class="undo" id="yesUndo">− 찬성 취소</button>
+  </div>
+  <div class="panel no">
+    <h2>반대</h2><div class="count" id="no">0</div>
+    <button class="add" id="noAdd">＋ 반대 1표</button>
+    <button class="undo" id="noUndo">− 반대 취소</button>
+  </div>
+</section>
+<section class="invalid">
+  <div><h2>무효표</h2><div class="count-small" id="invalid">0표</div></div>
+  <div class="invalid-actions">
+    <button class="add" id="invalidAdd">＋ 무효 1표</button>
+    <button class="undo" id="invalidUndo">− 무효 취소</button>
+  </div>
+</section>
+<section class="stats">
+  <h2>개표 종합 현황</h2>
+  <div class="statrow"><span>유효 투표수</span><strong id="valid">0표</strong></div>
+  <div class="statrow"><span>찬성률</span><strong id="yesRate">0.0%</strong></div>
+  <div class="bar"><span id="yesbar" style="width:0%"></span></div>
+  <div class="statrow"><span>반대율</span><strong id="noRate">0.0%</strong></div>
+  <div class="bar"><span id="nobar" style="width:0%"></span></div>
+</section>
+<div class="actions">
+  <button class="copy" id="copy">개표 결과 복사</button>
+  <button class="reset" id="reset">전체 개표 초기화</button>
+  <button class="reset" id="fullscreen">전체 화면</button>
+</div>
+<p class="note">개표 보조용 프로그램입니다. 공식 결과는 투표용지 대조 및 선거관리위원의 최종 확인을 거쳐 확정해 주세요. 집계 값은 이 브라우저에 자동 저장되며, 같은 기기·브라우저에서 다시 열면 이어집니다.</p>
+</main>
+<script>
+const state={yes:0,no:0,invalid:0};
+const $=id=>document.getElementById(id);
+function render(){
+  const valid=state.yes+state.no,total=valid+state.invalid;
+  $('yes').textContent=state.yes;$('no').textContent=state.no;
+  $('invalid').textContent=state.invalid+'표';$('valid').textContent=valid+'표';$('total').textContent=total+'표';
+  const yr=valid?state.yes/valid*100:0,nr=valid?state.no/valid*100:0;
+  $('yesRate').textContent=yr.toFixed(1)+'%';$('noRate').textContent=nr.toFixed(1)+'%';
+  $('yesbar').style.width=yr+'%';$('nobar').style.width=nr+'%';
+  $('yesUndo').disabled=state.yes===0;$('noUndo').disabled=state.no===0;$('invalidUndo').disabled=state.invalid===0;
+  try{localStorage.setItem('student-election-count',JSON.stringify(state))}catch(e){}
+}
+function change(key,delta){state[key]=Math.max(0,state[key]+delta);render()}
+$('yesAdd').onclick=()=>change('yes',1);$('yesUndo').onclick=()=>change('yes',-1);
+$('noAdd').onclick=()=>change('no',1);$('noUndo').onclick=()=>change('no',-1);
+$('invalidAdd').onclick=()=>change('invalid',1);$('invalidUndo').onclick=()=>change('invalid',-1);
+$('reset').onclick=()=>{if(confirm('모든 개표 수치를 0으로 초기화할까요?')){state.yes=0;state.no=0;state.invalid=0;render()}};
+$('copy').onclick=async()=>{
+ const valid=state.yes+state.no,total=valid+state.invalid;
+ const yr=valid?(state.yes/valid*100).toFixed(1):'0.0',nr=valid?(state.no/valid*100).toFixed(1):'0.0';
+ const result=`학생회장 선거 개표 결과\n찬성: ${state.yes}표\n반대: ${state.no}표\n무효: ${state.invalid}표\n유효 투표수: ${valid}표\n총 투표수: ${total}표\n찬성률: ${yr}%\n반대율: ${nr}%`;
+ try{await navigator.clipboard.writeText(result);alert('개표 결과를 복사했습니다.')}catch(e){prompt('아래 결과를 복사해 주세요.',result)}
+};
+$('fullscreen').onclick=async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen()}catch(e){alert('전체 화면은 브라우저의 F11 키로 전환해 주세요.')}};
+try{const saved=JSON.parse(localStorage.getItem('student-election-count')||'null');if(saved)for(const k of Object.keys(state))if(Number.isInteger(saved[k])&&saved[k]>=0)state[k]=saved[k]}catch(e){}
+render();
+</script>
+</body>
+</html>
